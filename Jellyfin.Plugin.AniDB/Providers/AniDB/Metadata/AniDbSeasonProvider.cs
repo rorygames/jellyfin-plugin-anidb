@@ -8,12 +8,15 @@ using MediaBrowser.Common.Net;
 using MediaBrowser.Controller.Entities.TV;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
+using System.Text.RegularExpressions;
 
 namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
 {
     public class AniDbSeasonProvider : IRemoteMetadataProvider<Season, SeasonInfo>
     {
         private readonly AniDbSeriesProvider _seriesProvider;
+
+        private static readonly Regex AniDbIdRegex = new Regex(@"\[anidb(id)?-(?<anidb_id>[0-9]+)\]", RegexOptions.Compiled);
 
         public AniDbSeasonProvider(IApplicationPaths appPaths)
         {
@@ -33,7 +36,20 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
             };
 
             var seriesId = info.ProviderIds.GetOrDefault(ProviderNames.AniDb);
-            if (seriesId == null)
+
+            bool seriesIdFound = false;
+
+            if (string.IsNullOrEmpty(seriesId))
+            {
+                seriesId = GetAniDbIdFromPath(info.Path);
+                seriesIdFound = !string.IsNullOrEmpty(seriesId);
+            }
+            else
+            {
+                seriesIdFound = true;
+            }
+
+            if (string.IsNullOrEmpty(seriesId))
             {
                 return result;
             }
@@ -44,8 +60,12 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
             var seriesResult = await _seriesProvider.GetMetadata(seriesInfo, cancellationToken);
             if (seriesResult.HasMetadata)
             {
-                result.Item.Name = seriesResult.Item.Name;
-                result.Item.Overview = seriesResult.Item.Overview;
+                if (!seriesIdFound)
+                {
+                    result.Item.Name = seriesResult.Item.Name;
+                    result.Item.Overview = seriesResult.Item.Overview;
+                }
+                result.Item.ProductionYear = seriesResult.Item.ProductionYear;
                 result.Item.PremiereDate = seriesResult.Item.PremiereDate;
                 result.Item.EndDate = seriesResult.Item.EndDate;
                 result.Item.CommunityRating = seriesResult.Item.CommunityRating;
@@ -54,6 +74,19 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
             }
 
             return result;
+        }
+
+        private static string GetAniDbIdFromPath(string path)
+        {
+            if (!string.IsNullOrEmpty(path))
+            {
+                var match = AniDbIdRegex.Match(path);
+                if (match.Success)
+                {
+                    return match.Groups["anidb_id"].Value;
+                }
+            }
+            return string.Empty;
         }
 
         public string Name => "AniDB";

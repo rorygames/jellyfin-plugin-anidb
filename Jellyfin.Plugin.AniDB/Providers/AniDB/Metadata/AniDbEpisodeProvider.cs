@@ -38,10 +38,19 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
             cancellationToken.ThrowIfCancellationRequested();
             var result = new MetadataResult<Episode>();
 
-            var animeId = info.SeriesProviderIds.GetOrDefault(ProviderNames.AniDb);
+            var animeId = info.SeasonProviderIds.GetOrDefault(ProviderNames.AniDb);
+            bool season = false;
             if (string.IsNullOrEmpty(animeId))
             {
-                return result;
+                animeId = animeId = info.SeriesProviderIds.GetOrDefault(ProviderNames.AniDb);
+                if (string.IsNullOrEmpty(animeId))
+                {
+                    return result;
+                }
+            }
+            else
+            {
+                season = true;
             }
 
             var seriesFolder = await FindSeriesFolder(animeId, cancellationToken);
@@ -50,7 +59,7 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
                 return result;
             }
 
-            if (!Plugin.Instance.Configuration.IgnoreSeason && info.ParentIndexNumber > 1)
+            if (!Plugin.Instance.Configuration.IgnoreSeason && info.ParentIndexNumber > 1 && !season)
             {
                 return result;
             }
