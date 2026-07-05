@@ -80,7 +80,7 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
             result.Item = new Episode
             {
                 IndexNumber = info.IndexNumber,
-                ParentIndexNumber = info.ParentIndexNumber
+                ParentIndexNumber = info.ParentIndexNumber ?? 1
             };
 
             result.HasMetadata = true;
@@ -92,7 +92,7 @@ namespace Jellyfin.Plugin.AniDB.Providers.AniDB.Metadata
 
         public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(EpisodeInfo searchInfo, CancellationToken cancellationToken)
         {
-            if (!searchInfo.IndexNumber.HasValue || !searchInfo.ParentIndexNumber.HasValue)
+            if (!searchInfo.IndexNumber.HasValue)
             {
                 return Enumerable.Empty<RemoteSearchResult>();
             }
